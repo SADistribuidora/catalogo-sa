@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — S&A Distribuidora Automotiva</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --asphalt: #1B1E24;
+    --warehouse: #F2EFE8;
+    --card: #FFFFFF;
+    --torque: #479A4A;
+    --torque-dark: #357238;
+    --line: #E1DCD1;
+    --ink: #1B1E24;
+    --ink-soft: #565C64;
+    --ok-bg: #E6F0E0; --ok-text: #386626;
+    --off-bg: #F5E1E1; --off-text: #A32D2D;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: var(--warehouse);
+    color: var(--ink);
+  }
+  .hidden { display: none !important; }
+
+  /* Login screen */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  .login-box {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 36px 32px;
+    width: 340px;
+    text-align: center;
+  }
+  .login-box h1 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    margin: 0 0 6px;
+  }
+  .login-box p { font-size: 13px; color: var(--ink-soft); margin: 0 0 22px; }
+  .login-box input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-family: 'Inter', sans-serif;
+  }
+  .login-box button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 7px;
+    border: none;
+    background: var(--torque);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .login-box button:hover { background: var(--torque-dark); }
+  .login-error { color: var(--off-text); font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+
+  /* Admin app */
+  header {
+    background: #000;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header .title {
+    color: #fff;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  header .actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    padding: 9px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+  .btn-primary { background: var(--torque); color: #fff; }
+  .btn-primary:hover { background: var(--torque-dark); }
+  .btn-ghost { background: transparent; color: #C7CBD1; border: 1px solid #3A3F47; }
+  .btn-ghost:hover { color: #fff; border-color: #666; }
+  .btn-danger { background: #A32D2D; color: #fff; }
+  .btn-danger:hover { background: #841F1F; }
+  .btn-small { padding: 6px 10px; font-size: 12px; }
+
+  .toolbar {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 18px 24px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .toolbar input, .toolbar select {
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    background: #fff;
+  }
+  #searchInput { flex: 1; min-width: 200px; }
+  .stat-pill {
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .table-wrap {
+    max-width: 1200px;
+    margin: 16px auto 60px;
+    padding: 0 24px;
+  }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+  th, td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--line); }
+  th { background: var(--asphalt); color: #fff; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:hover td { background: #FAF8F3; }
+  .thumb {
+    width: 42px; height: 42px; object-fit: contain; background: var(--warehouse);
+    border-radius: 5px; border: 1px solid var(--line); cursor: pointer;
+  }
+  .thumb-placeholder {
+    width: 42px; height: 42px; background: var(--warehouse); border-radius: 5px;
+    border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer;
+  }
+  .sku-mono { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-soft); }
+  .badge { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; }
+  .badge-on { background: var(--ok-bg); color: var(--ok-text); }
+  .badge-off { background: var(--off-bg); color: var(--off-text); }
+  .row-actions { display: flex; gap: 6px; }
+  .editable { border: 1px solid transparent; border-radius: 4px; padding: 3px 5px; min-width: 40px; }
+  .editable:hover { border-color: var(--line); }
+  .editable:focus { border-color: var(--torque); outline: none; background: #fff; }
+
+  .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-box {
+    background: #fff; border-radius: 10px; padding: 24px; width: 420px; max-width: 90vw;
+  }
+  .modal-box h3 { font-family: 'Oswald', sans-serif; margin: 0 0 16px; font-size: 17px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 9px 11px; border-radius: 6px; border: 1px solid var(--line); font-size: 13.5px;
+  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions .btn { flex: 1; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--asphalt); color: #fff; padding: 12px 20px; border-radius: 8px;
+    font-size: 13px; z-index: 200; opacity: 0; transition: opacity 0.2s;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>Admin S&amp;A</h1>
+    <p>Acesso restrito — digite a senha</p>
+    <input type="password" id="passwordInput" placeholder="Senha" autocomplete="current-password">
+    <button id="loginBtn">Entrar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="adminApp" class="hidden">
+  <header>
+    <div class="title">Admin — Catálogo S&amp;A</div>
+    <div class="actions">
+      <button class="btn btn-primary" id="addBtn">+ Novo produto</button>
+      <button class="btn btn-ghost" id="logoutBtn">Sair</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Buscar por nome, código ou marca...">
+    <select id="statusFilter">
+      <option value="">Todos os status</option>
+      <option value="ativo">Ativos</option>
+      <option value="inativo">Inativos</option>
+    </select>
+    <span class="stat-pill" id="statPill"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Foto</th>
+          <th>Nome</th>
+          <th>Código</th>
+          <th>Categoria</th>
+          <th>Marca</th>
+          <th>Estoque</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<input type="file" id="photoFileInput" accept="image/*" class="hidden">
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "/.netlify/functions/products";
+const PHOTO_API = "/.netlify/functions/photo";
+const AUTH_API = "/.netlify/functions/auth";
+const PAGE_SIZE = 50;
+
+let allProducts = [];
+let filtered = [];
+let page = 1;
+let editingPhotoId = null;
+
+// ---------- Auth ----------
+async function checkAuth() {
+  const res = await fetch(AUTH_API, { method: "GET" });
+  const data = await res.json();
+  if (data.authenticated) {
+    showApp();
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("adminApp").classList.add("hidden");
+}
+
+function showApp() {
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("adminApp").classList.remove("hidden");
+  loadProducts();
+}
+
+document.getElementById("loginBtn").addEventListener("click", doLogin);
+document.getElementById("passwordInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") doLogin();
+});
+
+async function doLogin() {
+  const password = document.getElementById("passwordInput").value;
+  const errEl = document.getElementById("loginError");
+  errEl.textContent = "";
+  try {
+    const res = await fetch(AUTH_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (res.ok) {
+      showApp();
+    } else {
+      const data = await res.json();
+      errEl.textContent = data.error || "Falha no login";
+    }
+  } catch {
+    errEl.textContent = "Erro de conexão";
+  }
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await fetch(AUTH_API, { method: "DELETE" });
+  showLogin();
+});
+
+// ---------- Load & render ----------
+async function loadProducts() {
+  const res = await fetch(`${API}?all=1`);
+  if (res.status === 401) { showLogin(); return; }
+  allProducts = await res.json();
+  applyFilters();
+}
+
+function applyFilters() {
+  const termo = document.getElementById("searchInput").value.trim().toLowerCase();
+  const status = document.getElementById("statusFilter").value;
+  filtered = allProducts.filter((p) => {
+    const matchTermo = !termo || p.nome.toLowerCase().includes(termo) || p.sku.toLowerCase().includes(termo) || p.marca.toLowerCase().includes(termo);
+    const matchStatus = !status || (status === "ativo" ? p.ativo : !p.ativo);
+    return matchTermo && matchStatus;
+  });
+  page = 1;
+  renderTable();
+}
+
+document.getElementById("searchInput").addEventListener("input", applyFilters);
+document.getElementById("statusFilter").addEventListener("change", applyFilters);
+
+function iconeCategoria() { return "🔧"; }
+
+function renderTable() {
+  document.getElementById("statPill").textContent = `${filtered.length} de ${allProducts.length} produtos`;
+
+  const start = (page - 1) * PAGE_SIZE;
+  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = pageItems.map((p) => `
+    <tr data-id="${p.id}">
+      <td>
+        ${p.fotoUrl
+          ? `<img class="thumb" src="${p.fotoUrl}" data-action="photo" data-id="${p.id}" title="Clique para trocar a foto">`
+          : `<div class="thumb-placeholder" data-action="photo" data-id="${p.id}" title="Clique para adicionar foto">${iconeCategoria()}</div>`}
+      </td>
+      <td><span class="editable" contenteditable="true" data-field="nome" data-id="${p.id}">${escapeHtml(p.nome)}</span></td>
+      <td><span class="editable sku-mono" contenteditable="true" data-field="sku" data-id="${p.id}">${escapeHtml(p.sku)}</span></td>
+      <td><span class="editable" contenteditable="true" data-field="categoria" data-id="${p.id}">${escapeHtml(p.categoria)}</span></td>
+      <td><span class="editable" contenteditable="true" data-field="marca" data-id="${p.id}">${escapeHtml(p.marca)}</span></td>
+      <td><span class="editable" contenteditable="true" data-field="estoque" data-id="${p.id}">${p.estoque}</span></td>
+      <td>
+        <button class="badge ${p.ativo ? "badge-on" : "badge-off"}" data-action="toggle" data-id="${p.id}">
+          ${p.ativo ? "Ativo" : "Inativo"}
+        </button>
+      </td>
+      <td class="row-actions">
+        <button class="btn btn-danger btn-small" data-action="delete" data-id="${p.id}">Apagar</button>
+      </td>
+    </tr>
+  `).join("");
+
+  renderPagination();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
+function renderPagination() {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const el = document.getElementById("pagination");
+  if (totalPages <= 1) { el.innerHTML = ""; return; }
+  let html = "";
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="btn ${i === page ? "btn-primary" : "btn-ghost"} btn-small" data-page="${i}">${i}</button>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => { page = Number(btn.dataset.page); renderTable(); });
+  });
+}
+
+// ---------- Toast ----------
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+// ---------- Edit inline fields ----------
+document.getElementById("tableBody").addEventListener("blur", async (e) => {
+  const target = e.target;
+  if (!target.classList || !target.classList.contains("editable")) return;
+  const id = Number(target.dataset.id);
+  const field = target.dataset.field;
+  let value = target.textContent.trim();
+  if (field === "estoque") value = Number(value) || 0;
+  const produto = allProducts.find((p) => p.id === id);
+  if (produto && produto[field] === value) return;
+  await updateProduct(id, { [field]: value });
+}, true);
+
+// ---------- Toggle ativo ----------
+document.getElementById("tableBody").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  const id = Number(btn.dataset.id);
+  const action = btn.dataset.action;
+
+  if (action === "toggle") {
+    const produto = allProducts.find((p) => p.id === id);
+    await updateProduct(id, { ativo: !produto.ativo });
+  }
+
+  if (action === "delete") {
+    const produto = allProducts.find((p) => p.id === id);
+    if (confirm(`Apagar "${produto.nome}"? Essa ação não pode ser desfeita.`)) {
+      await deleteProduct(id);
+    }
+  }
+
+  if (action === "photo") {
+    editingPhotoId = id;
+    document.getElementById("photoFileInput").click();
+  }
+});
+
+async function updateProduct(id, changes) {
+  const res = await fetch(API, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...changes }),
+  });
+  if (res.ok) {
+    const updated = await res.json();
+    const idx = allProducts.findIndex((p) => p.id === id);
+    allProducts[idx] = updated;
+    applyFilters();
+    showToast("Salvo!");
+  } else {
+    showToast("Erro ao salvar");
+  }
+}
+
+async function deleteProduct(id) {
+  const res = await fetch(`${API}?id=${id}`, { method: "DELETE" });
+  if (res.ok) {
+    allProducts = allProducts.filter((p) => p.id !== id);
+    applyFilters();
+    showToast("Produto apagado");
+  } else {
+    showToast("Erro ao apagar");
+  }
+}
+
+// ---------- Photo upload ----------
+document.getElementById("photoFileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file || !editingPhotoId) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    showToast("Enviando foto...");
+    const res = await fetch(PHOTO_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingPhotoId, imageBase64: reader.result }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      await updateProduct(editingPhotoId, { fotoUrl: data.fotoUrl + `&t=${Date.now()}` });
+      showToast("Foto atualizada!");
+    } else {
+      showToast("Erro ao enviar foto");
+    }
+    editingPhotoId = null;
+    e.target.value = "";
+  };
+  reader.readAsDataURL(file);
+});
+
+// ---------- Add product modal ----------
+document.getElementById("addBtn").addEventListener("click", () => {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3>Novo produto</h3>
+      <div class="field"><label>Nome</label><input id="fNome" type="text"></div>
+      <div class="field"><label>Código (SKU)</label><input id="fSku" type="text"></div>
+      <div class="field"><label>Categoria</label><input id="fCategoria" type="text"></div>
+      <div class="field"><label>Marca</label><input id="fMarca" type="text"></div>
+      <div class="field"><label>Estoque</label><input id="fEstoque" type="number" value="0"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelAdd">Cancelar</button>
+        <button class="btn btn-primary" id="confirmAdd">Adicionar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#cancelAdd").addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector("#confirmAdd").addEventListener("click", async () => {
+    const nome = overlay.querySelector("#fNome").value.trim();
+    if (!nome) { showToast("Nome é obrigatório"); return; }
+    const body = {
+      nome,
+      sku: overlay.querySelector("#fSku").value.trim(),
+      categoria: overlay.querySelector("#fCategoria").value.trim() || "Geral",
+      marca: overlay.querySelector("#fMarca").value.trim() || "Diversos",
+      estoque: Number(overlay.querySelector("#fEstoque").value) || 0,
+      ativo: true,
+    };
+    const res = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const novo = await res.json();
+      allProducts.unshift(novo);
+      applyFilters();
+      showToast("Produto adicionado!");
+      overlay.remove();
+    } else {
+      showToast("Erro ao adicionar produto");
+    }
+  });
+});
+
+checkAuth();
+</script>
+
+</body>
+</html>
