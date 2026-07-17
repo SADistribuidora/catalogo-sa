@@ -6,7 +6,7 @@ const STORE_NAME = "sa-catalogo";
 const KEY = "products";
 
 async function loadProducts() {
-  const store = getStore(STORE_NAME);
+  const store = getStore({ name: STORE_NAME, siteID: process.env.BLOBS_SITE_ID, token: process.env.BLOBS_TOKEN });
   const raw = await store.get(KEY, { type: "json" });
   if (raw) return raw;
   // Primeira vez: semeia com os dados iniciais
@@ -15,7 +15,7 @@ async function loadProducts() {
 }
 
 async function saveProducts(products) {
-  const store = getStore(STORE_NAME);
+  const store = getStore({ name: STORE_NAME, siteID: process.env.BLOBS_SITE_ID, token: process.env.BLOBS_TOKEN });
   await store.setJSON(KEY, products);
 }
 

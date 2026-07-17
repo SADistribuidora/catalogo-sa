@@ -561,6 +561,31 @@
 <script id="fotosDataScript">
 let produtos = [];
 </script>
+<div class="overlay" id="overlay"></div>
+<div class="quote-panel" id="quotePanel">
+  <div class="quote-header">
+    <div class="quote-title">Lista de orçamento</div>
+    <button class="quote-close" id="quoteClose">&times;</button>
+  </div>
+  <div class="quote-items" id="quoteItems"></div>
+  <div class="quote-empty" id="quoteEmpty">Nenhum item adicionado ainda.<br>Clique no "+" dos produtos pra montar seu orçamento.</div>
+  <div class="quote-footer" id="quoteFooter">
+    <div class="quote-total-row">
+      <span id="quoteItemCountLabel">0 itens na lista</span>
+    </div>
+    <div class="quote-actions">
+      <button class="quote-action-btn secondary" id="copyBtn">Copiar lista</button>
+      <button class="quote-action-btn primary" id="whatsappBtn">Enviar via WhatsApp</button>
+    </div>
+    <div class="quote-actions" style="margin-top:8px;">
+      <button class="quote-action-btn secondary" id="pdfBtn" style="flex:1;">Exportar PDF</button>
+    </div>
+    <div class="quote-note">Sem preço aqui — você recebe o orçamento certinho no WhatsApp.</div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
 <script>
 
 const ICONE_PADRAO = "&#128295;";
@@ -888,31 +913,6 @@ document.getElementById("pdfBtn").addEventListener("click", () => {
   window.print();
 });
 </script>
-
-<div class="overlay" id="overlay"></div>
-<div class="quote-panel" id="quotePanel">
-  <div class="quote-header">
-    <div class="quote-title">Lista de orçamento</div>
-    <button class="quote-close" id="quoteClose">&times;</button>
-  </div>
-  <div class="quote-items" id="quoteItems"></div>
-  <div class="quote-empty" id="quoteEmpty">Nenhum item adicionado ainda.<br>Clique no "+" dos produtos pra montar seu orçamento.</div>
-  <div class="quote-footer" id="quoteFooter">
-    <div class="quote-total-row">
-      <span id="quoteItemCountLabel">0 itens na lista</span>
-    </div>
-    <div class="quote-actions">
-      <button class="quote-action-btn secondary" id="copyBtn">Copiar lista</button>
-      <button class="quote-action-btn primary" id="whatsappBtn">Enviar via WhatsApp</button>
-    </div>
-    <div class="quote-actions" style="margin-top:8px;">
-      <button class="quote-action-btn secondary" id="pdfBtn" style="flex:1;">Exportar PDF</button>
-    </div>
-    <div class="quote-note">Sem preço aqui — você recebe o orçamento certinho no WhatsApp.</div>
-  </div>
-</div>
-
-<div id="printArea"></div>
 
 </body>
 </html>

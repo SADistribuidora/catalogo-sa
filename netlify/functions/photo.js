@@ -5,7 +5,7 @@ const STORE_NAME = "sa-fotos";
 
 exports.handler = async (event) => {
   const qs = event.queryStringParameters || {};
-  const store = getStore(STORE_NAME);
+  const store = getStore({ name: STORE_NAME, siteID: process.env.BLOBS_SITE_ID, token: process.env.BLOBS_TOKEN });
 
   if (event.httpMethod === "GET") {
     const id = qs.id;
