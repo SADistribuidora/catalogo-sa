@@ -344,6 +344,13 @@
     font-size: 12.5px;
     font-weight: 600;
     color: var(--ink-soft);
+    transition: border-color 0.15s, color 0.15s, transform 0.15s;
+    cursor: pointer;
+  }
+  .marca-badge:hover {
+    border-color: var(--torque);
+    color: var(--torque-dark);
+    transform: translateY(-2px);
   }
 
   .cta-catalog {
@@ -550,19 +557,19 @@
     <div class="section-eyebrow">Trabalhamos com as melhores</div>
     <h2 class="section-title" style="margin-bottom:24px;">Nossas marcas</h2>
     <div class="marcas-strip">
-      <span class="marca-badge">Permak</span>
-      <span class="marca-badge">Ludovico</span>
-      <span class="marca-badge">Zinni Guell</span>
-      <span class="marca-badge">Prisma</span>
-      <span class="marca-badge">Rotax</span>
-      <span class="marca-badge">Ray X</span>
-      <span class="marca-badge">Kx3</span>
-      <span class="marca-badge">Expert</span>
-      <span class="marca-badge">Wr Eletronica</span>
-      <span class="marca-badge">Asx Produtos</span>
-      <span class="marca-badge">Quantum</span>
-      <span class="marca-badge">Olimpus</span>
-      <span class="marca-badge">+ 140 marcas</span>
+      <a class="marca-badge" href="/catalogo/?marca=Permak">Permak</a>
+      <a class="marca-badge" href="/catalogo/?marca=Ludovico">Ludovico</a>
+      <a class="marca-badge" href="/catalogo/?marca=Zinni%20Guell">Zinni Guell</a>
+      <a class="marca-badge" href="/catalogo/?marca=Prisma">Prisma</a>
+      <a class="marca-badge" href="/catalogo/?marca=Rotax">Rotax</a>
+      <a class="marca-badge" href="/catalogo/?marca=Ray%20X">Ray X</a>
+      <a class="marca-badge" href="/catalogo/?marca=Kx3">Kx3</a>
+      <a class="marca-badge" href="/catalogo/?marca=Expert">Expert</a>
+      <a class="marca-badge" href="/catalogo/?marca=Wr%20Eletronica">Wr Eletronica</a>
+      <a class="marca-badge" href="/catalogo/?marca=Asx%20Produtos">Asx Produtos</a>
+      <a class="marca-badge" href="/catalogo/?marca=Quantum">Quantum</a>
+      <a class="marca-badge" href="/catalogo/?marca=Olimpus">Olimpus</a>
+      <a class="marca-badge" href="/marcas/" style="background:var(--torque);color:#fff;border-color:var(--torque);">+ 140 marcas</a>
     </div>
   </div>
 </section>
