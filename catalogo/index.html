@@ -710,6 +710,7 @@ document.getElementById("searchInput").addEventListener("input", (e) => {
 const urlParams = new URLSearchParams(window.location.search);
 const catUrl = urlParams.get('categoria');
 const buscaUrl = urlParams.get('busca');
+const marcaUrl = urlParams.get('marca');
 
 async function carregarProdutos() {
   resultsBarEl.innerHTML = "Carregando produtos...";
@@ -728,6 +729,10 @@ async function carregarProdutos() {
   if (catUrl && categorias.includes(catUrl)) {
     filtroCategoria = catUrl;
     catSelect.value = catUrl;
+  }
+  if (marcaUrl && marcasList.includes(marcaUrl)) {
+    filtroMarca = marcaUrl;
+    marcaSelect.value = marcaUrl;
   }
   if (buscaUrl) {
     busca = buscaUrl;
