@@ -85,9 +85,34 @@
   .btn-whatsapp:hover { background: var(--torque-dark); }
 
   .hero {
-    background: #000;
-    padding: 48px 0 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.55) 55%, #000 100%), url('assets/hero-car.jpg');
+    background-size: cover;
+    background-position: center 60%;
+    padding: 64px 0 0;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-glow {
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(71,154,74,0.20) 0%, rgba(71,154,74,0) 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero .container { position: relative; z-index: 2; }
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
   }
   .hero-eyebrow {
     color: var(--torque);
@@ -95,7 +120,19 @@
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    margin-bottom: 14px;
+    margin-bottom: 6px;
+  }
+  .hero-eyebrow-sub {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    color: #fff;
+  }
+  .hero-eyebrow-sub .accent-letter {
+    color: var(--torque);
+    font-size: 26px;
   }
   .hero h1 {
     font-family: 'Oswald', sans-serif;
@@ -105,12 +142,14 @@
     line-height: 1.2;
     max-width: 680px;
     margin: 0 auto 14px;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.6);
   }
   .hero p {
-    color: #A9AFB8;
+    color: #E4E6E9;
     font-size: 15px;
     max-width: 520px;
     margin: 0 auto 32px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
   }
 
   .search-bar {
@@ -305,6 +344,13 @@
     font-size: 12.5px;
     font-weight: 600;
     color: var(--ink-soft);
+    transition: border-color 0.15s, color 0.15s, transform 0.15s;
+    cursor: pointer;
+  }
+  .marca-badge:hover {
+    border-color: var(--torque);
+    color: var(--torque-dark);
+    transform: translateY(-2px);
   }
 
   .cta-catalog {
@@ -413,8 +459,10 @@
 </header>
 
 <section class="hero">
+  <div class="hero-glow"></div>
   <div class="container">
-    <div class="hero-eyebrow">Distribuidora automotiva</div>
+    <div class="hero-eyebrow">Distribuidora Automotiva</div>
+    <div class="hero-eyebrow-sub"><span class="accent-letter">A</span>cessórios <span class="accent-letter">A</span>utomotivos</div>
     <h1>Peças, som e acessórios com o código certo pro seu orçamento</h1>
     <p>Filtre por categoria ou digite o que procura — monte sua lista e receba o orçamento pelo WhatsApp.</p>
   </div>
@@ -435,15 +483,15 @@
 
 <div class="stats">
   <div class="stat-item">
-    <div class="stat-number">3.442+</div>
+    <div class="stat-number" data-count="3442" data-suffix="+">0</div>
     <div class="stat-label">Produtos ativos</div>
   </div>
   <div class="stat-item">
-    <div class="stat-number">137</div>
+    <div class="stat-number" data-count="137" data-suffix="">0</div>
     <div class="stat-label">Categorias</div>
   </div>
   <div class="stat-item">
-    <div class="stat-number">150+</div>
+    <div class="stat-number" data-count="150" data-suffix="+">0</div>
     <div class="stat-label">Marcas parceiras</div>
   </div>
 </div>
@@ -455,7 +503,7 @@
         <div class="section-eyebrow">Navegue por</div>
         <h2 class="section-title">Categorias em destaque</h2>
       </div>
-      <a href="/catalogo/" class="section-link">Ver catálogo completo →</a>
+      <a href="/categorias/" class="section-link">Ver catálogo completo →</a>
     </div>
     <div class="tile-grid" id="tileGrid"></div>
   </div>
@@ -509,19 +557,19 @@
     <div class="section-eyebrow">Trabalhamos com as melhores</div>
     <h2 class="section-title" style="margin-bottom:24px;">Nossas marcas</h2>
     <div class="marcas-strip">
-      <span class="marca-badge">Permak</span>
-      <span class="marca-badge">Ludovico</span>
-      <span class="marca-badge">Zinni Guell</span>
-      <span class="marca-badge">Prisma</span>
-      <span class="marca-badge">Rotax</span>
-      <span class="marca-badge">Ray X</span>
-      <span class="marca-badge">Kx3</span>
-      <span class="marca-badge">Expert</span>
-      <span class="marca-badge">Wr Eletronica</span>
-      <span class="marca-badge">Asx Produtos</span>
-      <span class="marca-badge">Quantum</span>
-      <span class="marca-badge">Olimpus</span>
-      <span class="marca-badge">+ 140 marcas</span>
+      <a class="marca-badge" href="/catalogo/?marca=Permak">Permak</a>
+      <a class="marca-badge" href="/catalogo/?marca=Ludovico">Ludovico</a>
+      <a class="marca-badge" href="/catalogo/?marca=Zinni%20Guell">Zinni Guell</a>
+      <a class="marca-badge" href="/catalogo/?marca=Prisma">Prisma</a>
+      <a class="marca-badge" href="/catalogo/?marca=Rotax">Rotax</a>
+      <a class="marca-badge" href="/catalogo/?marca=Ray%20X">Ray X</a>
+      <a class="marca-badge" href="/catalogo/?marca=Kx3">Kx3</a>
+      <a class="marca-badge" href="/catalogo/?marca=Expert">Expert</a>
+      <a class="marca-badge" href="/catalogo/?marca=Wr%20Eletronica">Wr Eletronica</a>
+      <a class="marca-badge" href="/catalogo/?marca=Asx%20Produtos">Asx Produtos</a>
+      <a class="marca-badge" href="/catalogo/?marca=Quantum">Quantum</a>
+      <a class="marca-badge" href="/catalogo/?marca=Olimpus">Olimpus</a>
+      <a class="marca-badge" href="/marcas/" style="background:var(--torque);color:#fff;border-color:var(--torque);">+ 140 marcas</a>
     </div>
   </div>
 </section>
@@ -566,8 +614,35 @@
 <script>
   document.getElementById("anoAtual").textContent = new Date().getFullYear();
 
-  const tiles = {"Contra Frente": {"id": 2318, "nome": "Contra F. Palio/Id/St 10 Cinza 2D", "sku": "149C", "categoria": "Contra Frente", "marca": "Ludovico", "preco": 115.9, "estoque": 0, "temFoto": true}, "Maquina Vidro": {"id": 2418, "nome": "Maquina Celta 2P 10D L/D Orig", "sku": "3376D", "categoria": "Maquina Vidro", "marca": "Zinni Guell", "preco": 115.9, "estoque": 3, "temFoto": true}, "Led": {"id": 3352, "nome": "Pingao Rayx T20 Canbus 3Led 12/24V Dupla", "sku": "RLT20-7443B", "categoria": "Led", "marca": "Ray X", "preco": 69.9, "estoque": 9, "temFoto": true}, "Controles De Alarmes": {"id": 566, "nome": "Controle Fiat 300 Positron", "sku": "FT720", "categoria": "Controles De Alarmes", "marca": "Wr Eletronica", "preco": 55.9, "estoque": 22, "temFoto": true}, "Capota": {"id": 1819, "nome": "Lona Hilux Cab/Dupla Elite 2016", "sku": "RO194P", "categoria": "Capota", "marca": "Flach Couver", "preco": 399.0, "estoque": 0, "temFoto": true}, "Alto Falantes": {"id": 2430, "nome": "Af 4/6 Triax 110W Leson", "sku": "2LS070046", "categoria": "Alto Falantes", "marca": "Le Son", "preco": 69.9, "estoque": 2, "temFoto": true}, "Retrovisor": {"id": 3290, "nome": "Espelho Ford Ka 2014 L/E Convexo", "sku": "SB53003099", "categoria": "Retrovisor", "marca": "M2B", "preco": 31.9, "estoque": 4, "temFoto": true}, "Friso": {"id": 885, "nome": "Soleira Up Cromada", "sku": "PRD-00885", "categoria": "Friso", "marca": "Prisma", "preco": 90.0, "estoque": 1, "temFoto": true}};
-  const destaques = [{"id": 2632, "nome": "Radio Mp5 H-Tech 3100 G2 4/60W", "sku": "HT-3100", "categoria": "Radio Mp5", "marca": "H-Tech", "preco": 369.9, "estoque": 4, "temFoto": true}, {"id": 3332, "nome": "Espelho Etios 13/21 L/E", "sku": "SB53220531", "categoria": "Retrovisor", "marca": "M2B", "preco": 35.9, "estoque": 4, "temFoto": true}, {"id": 2738, "nome": "Capa Controle Canivete Ford Ka+ 3B+P", "sku": "FD304", "categoria": "Controles De Alarmes", "marca": "Wr Eletronica", "preco": 69.9, "estoque": 4, "temFoto": true}, {"id": 2815, "nome": "Soleira Renegade Pr.", "sku": "PRD-02815", "categoria": "Friso", "marca": "Prisma", "preco": 90.0, "estoque": 1, "temFoto": true}, {"id": 3348, "nome": "Lampada Torpedo 31Mm Canbus", "sku": "RLT1131", "categoria": "Led", "marca": "Ray X", "preco": 22.9, "estoque": 35, "temFoto": true}, {"id": 107, "nome": "Antena Palio S-Cabo Permak", "sku": "100/F", "categoria": "Antena", "marca": "Permak", "preco": 29.9, "estoque": 32, "temFoto": true}, {"id": 2288, "nome": "Contra F. Hb-20 2020> 7\" Slim 9\" Black P", "sku": "H7.271B", "categoria": "Contra Frente", "marca": "Ludovico", "preco": 199.9, "estoque": 2, "temFoto": true}, {"id": 600, "nome": "Modulo Vd. Palio/Strada Lotus", "sku": "PRD-00600", "categoria": "Modulo Vidro", "marca": "Lotus", "preco": 79.0, "estoque": 1, "temFoto": true}, {"id": 2259, "nome": "Trava Orig.4F Palio/Si/Str Tras L/E", "sku": "EM FT 2E", "categoria": "Trava Porta", "marca": "Tragial", "preco": 69.9, "estoque": 10, "temFoto": true}, {"id": 3507, "nome": "Camera De Re Roadstar 180� 12/24V", "sku": "RS-185BR", "categoria": "Camera", "marca": "Roadstar", "preco": 93.9, "estoque": 29, "temFoto": true}];
+  // Contagem animada dos números da barra de estatísticas
+  function animarContagem(el) {
+    const alvo = Number(el.dataset.count);
+    const sufixo = el.dataset.suffix || "";
+    const duracao = 1400;
+    const inicio = performance.now();
+    function passo(agora) {
+      const progresso = Math.min((agora - inicio) / duracao, 1);
+      const facilitado = 1 - Math.pow(1 - progresso, 3);
+      const valor = Math.floor(facilitado * alvo);
+      el.textContent = valor.toLocaleString('pt-BR') + sufixo;
+      if (progresso < 1) requestAnimationFrame(passo);
+    }
+    requestAnimationFrame(passo);
+  }
+
+  const statEls = document.querySelectorAll(".stat-number[data-count]");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        animarContagem(entry.target);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  statEls.forEach((el) => observer.observe(el));
+
+  const tiles = {"Contra Frente": {"id": 2318, "nome": "Contra F. Palio/Id/St 10 Cinza 2D", "sku": "149C", "categoria": "Contra Frente", "marca": "Ludovico", "estoque": 0, "temFoto": true}, "Maquina Vidro": {"id": 2418, "nome": "Maquina Celta 2P 10D L/D Orig", "sku": "3376D", "categoria": "Maquina Vidro", "marca": "Zinni Guell", "estoque": 3, "temFoto": true}, "Led": {"id": 3352, "nome": "Pingao Rayx T20 Canbus 3Led 12/24V Dupla", "sku": "RLT20-7443B", "categoria": "Led", "marca": "Ray X", "estoque": 9, "temFoto": true}, "Controles De Alarmes": {"id": 566, "nome": "Controle Fiat 300 Positron", "sku": "FT720", "categoria": "Controles De Alarmes", "marca": "Wr Eletronica", "estoque": 22, "temFoto": true}, "Capota": {"id": 1819, "nome": "Lona Hilux Cab/Dupla Elite 2016", "sku": "RO194P", "categoria": "Capota", "marca": "Flach Couver", "estoque": 0, "temFoto": true}, "Alto Falantes": {"id": 2430, "nome": "Af 4/6 Triax 110W Leson", "sku": "2LS070046", "categoria": "Alto Falantes", "marca": "Le Son", "estoque": 2, "temFoto": true}, "Retrovisor": {"id": 3290, "nome": "Espelho Ford Ka 2014 L/E Convexo", "sku": "SB53003099", "categoria": "Retrovisor", "marca": "M2B", "estoque": 4, "temFoto": true}, "Friso": {"id": 885, "nome": "Soleira Up Cromada", "sku": "PRD-00885", "categoria": "Friso", "marca": "Prisma", "estoque": 1, "temFoto": true}};
+  const destaques = [{"id": 2632, "nome": "Radio Mp5 H-Tech 3100 G2 4/60W", "sku": "HT-3100", "categoria": "Radio Mp5", "marca": "H-Tech", "estoque": 4, "temFoto": true}, {"id": 3332, "nome": "Espelho Etios 13/21 L/E", "sku": "SB53220531", "categoria": "Retrovisor", "marca": "M2B", "estoque": 4, "temFoto": true}, {"id": 2738, "nome": "Capa Controle Canivete Ford Ka+ 3B+P", "sku": "FD304", "categoria": "Controles De Alarmes", "marca": "Wr Eletronica", "estoque": 4, "temFoto": true}, {"id": 2815, "nome": "Soleira Renegade Pr.", "sku": "PRD-02815", "categoria": "Friso", "marca": "Prisma", "estoque": 1, "temFoto": true}, {"id": 3348, "nome": "Lampada Torpedo 31Mm Canbus", "sku": "RLT1131", "categoria": "Led", "marca": "Ray X", "estoque": 35, "temFoto": true}, {"id": 107, "nome": "Antena Palio S-Cabo Permak", "sku": "100/F", "categoria": "Antena", "marca": "Permak", "estoque": 32, "temFoto": true}, {"id": 2288, "nome": "Contra F. Hb-20 2020> 7\" Slim 9\" Black P", "sku": "H7.271B", "categoria": "Contra Frente", "marca": "Ludovico", "estoque": 2, "temFoto": true}, {"id": 600, "nome": "Modulo Vd. Palio/Strada Lotus", "sku": "PRD-00600", "categoria": "Modulo Vidro", "marca": "Lotus", "estoque": 1, "temFoto": true}, {"id": 2259, "nome": "Trava Orig.4F Palio/Si/Str Tras L/E", "sku": "EM FT 2E", "categoria": "Trava Porta", "marca": "Tragial", "estoque": 10, "temFoto": true}, {"id": 3507, "nome": "Camera De Re Roadstar 180� 12/24V", "sku": "RS-185BR", "categoria": "Camera", "marca": "Roadstar", "estoque": 29, "temFoto": true}];
 
   const tileGrid = document.getElementById("tileGrid");
   tileGrid.innerHTML = Object.entries(tiles).map(([cat, p]) => `
@@ -588,6 +663,22 @@
       </div>
     </a>
   `).join("");
+
+  // Fade-in ao rolar para tiles, produtos e diferenciais (aplicado depois que os grids existem)
+  const revealTargets = document.querySelectorAll(".tile, .prod-card, .why-item, .marca-badge");
+  revealTargets.forEach((el, i) => {
+    el.classList.add("reveal");
+    el.style.transitionDelay = (i % 6) * 0.05 + "s";
+  });
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("in-view");
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  revealTargets.forEach((el) => revealObserver.observe(el));
 </script>
 
 </body>
