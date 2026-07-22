@@ -204,8 +204,26 @@
     padding: 16px 24px 4px;
     font-size: 13px;
     color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
   }
   .results-bar strong { color: var(--ink); }
+  .export-catalog-btn {
+    background: #fff;
+    border: 1px solid var(--asphalt);
+    color: var(--asphalt);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+  }
+  .export-catalog-btn:hover { background: var(--asphalt); color: #fff; }
 
   .grid {
     max-width: 1100px;
@@ -643,7 +661,10 @@
   <select id="marcaSelect" class="filter-select"></select>
 </div>
 
-<div class="results-bar" id="resultsBar"></div>
+<div class="results-bar" id="resultsBar">
+  <span id="resultsCount"></span>
+  <button class="export-catalog-btn" id="exportCatalogBtn">Exportar esta lista em PDF</button>
+</div>
 
 <div class="grid" id="grid"></div>
 <div class="empty" id="empty" style="display:none;">Nenhum produto encontrado para essa busca.</div>
@@ -719,7 +740,7 @@ const catSelect = document.getElementById("catSelect");
 const marcaSelect = document.getElementById("marcaSelect");
 const gridEl = document.getElementById("grid");
 const emptyEl = document.getElementById("empty");
-const resultsBarEl = document.getElementById("resultsBar");
+const resultsBarEl = document.getElementById("resultsCount");
 const loadMoreWrap = document.getElementById("loadMoreWrap");
 const loadMoreBtn = document.getElementById("loadMoreBtn");
 
@@ -1083,6 +1104,49 @@ document.getElementById("pdfBtn").addEventListener("click", () => {
     </table>
     <p style="font-family:sans-serif;text-align:right;font-size:13px;margin-top:14px;">Total de itens: ${totalItens}</p>
     <p style="font-family:sans-serif;color:#777;font-size:11px;margin-top:24px;">Este documento não contém preços — nossa equipe entra em contato com o orçamento pelo WhatsApp (62) 3205-7740.</p>
+  `;
+  window.print();
+});
+
+document.getElementById("exportCatalogBtn").addEventListener("click", () => {
+  const lista = produtosFiltrados();
+  if (lista.length === 0) {
+    alert("Nenhum produto para exportar com esse filtro.");
+    return;
+  }
+  if (lista.length > 400) {
+    const continuar = confirm(`Essa lista tem ${lista.length} produtos — o PDF pode ficar bem grande e demorar pra gerar. Quer filtrar mais (categoria/marca/busca) antes de exportar, ou continuar mesmo assim?\n\nOK = continuar | Cancelar = voltar e filtrar mais`);
+    if (!continuar) return;
+  }
+
+  const filtroDesc = [];
+  if (filtroCategoria !== "Todas") filtroDesc.push(`Categoria: ${filtroCategoria}`);
+  if (filtroMarca !== "Todas") filtroDesc.push(`Marca: ${filtroMarca}`);
+  if (busca.trim()) filtroDesc.push(`Busca: "${busca.trim()}"`);
+  const filtroTexto = filtroDesc.length ? filtroDesc.join(" · ") : "Catálogo completo";
+
+  let cards = "";
+  lista.forEach(p => {
+    const fotoUrl = p.fotoUrl || "";
+    cards += `
+      <div style="width:31%; display:inline-block; vertical-align:top; margin:0 1% 18px; page-break-inside:avoid;">
+        <div style="width:100%; aspect-ratio:1/1; background:#F2EFE8; display:flex; align-items:center; justify-content:center; border:1px solid #ddd; border-radius:6px; overflow:hidden; margin-bottom:6px;">
+          ${fotoUrl ? `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:contain;">` : `<span style="font-size:26px;">🔧</span>`}
+        </div>
+        <div style="font-family:sans-serif; font-size:9.5px; color:#479A4A; font-weight:600; text-transform:uppercase;">${p.categoria} · ${p.marca}</div>
+        <div style="font-family:sans-serif; font-size:11.5px; font-weight:600; line-height:1.3; margin:2px 0;">${p.nome}</div>
+        <div style="font-family:monospace; font-size:10px; color:#555;">${p.sku}</div>
+      </div>`;
+  });
+
+  document.getElementById("printArea").innerHTML = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <h2 style="font-family:sans-serif;margin:0;">S&amp;A Distribuidora Automotiva</h2>
+      <p style="font-family:sans-serif;color:#555;font-size:12px;margin:4px 0 2px;">Catálogo — gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
+      <p style="font-family:sans-serif;color:#479A4A;font-size:11px;margin:0;font-weight:600;">${filtroTexto} · ${lista.length} produto${lista.length === 1 ? '' : 's'}</p>
+    </div>
+    <div>${cards}</div>
+    <p style="font-family:sans-serif;color:#777;font-size:11px;margin-top:24px;text-align:center;">Sem preços neste documento — solicite orçamento pelo WhatsApp (62) 3205-7740.</p>
   `;
   window.print();
 });
