@@ -6,9 +6,14 @@
 
 # ---- CONFIGURACAO ----
 $SyncUrl = "https://seadistribuidora.com.br/.netlify/functions/sync"
-$SyncKey = $env:SYNC_API_KEY   # mesma chave configurada no Netlify (SYNC_API_KEY) - definir como variavel de ambiente da maquina/tarefa agendada
+$SyncKey = $env:SA_SYNC_KEY   # mesma chave configurada no Netlify - definir como variavel de ambiente da maquina/tarefa agendada
 $LogFile = "C:\ces\catalogo-sa\sync\sync-log.txt"
 $ScratchDir = "$env:TEMP\sa-sync"
+
+if ([string]::IsNullOrEmpty($SyncKey)) {
+    Write-Host "Defina a variavel de ambiente SA_SYNC_KEY antes de rodar"
+    exit 1
+}
 
 # ---- PREPARACAO ----
 New-Item -ItemType Directory -Force -Path $ScratchDir | Out-Null
