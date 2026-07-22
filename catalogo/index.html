@@ -511,6 +511,97 @@
 
   #printArea { display: none; }
 
+  .product-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    padding: 20px;
+  }
+  .product-modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .product-modal {
+    background: #fff;
+    border-radius: 12px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.2s;
+  }
+  .product-modal-overlay.open .product-modal { transform: translateY(0); }
+  .product-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .product-modal-photo {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: var(--warehouse);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
+  }
+  .product-modal-photo img { width: 100%; height: 100%; object-fit: contain; }
+  .product-modal-photo span { font-size: 64px; }
+  .product-modal-body { padding: 24px; }
+  .product-modal-cat {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--torque-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+  .product-modal-name {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    margin-bottom: 14px;
+    line-height: 1.3;
+  }
+  .product-modal-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+    margin-bottom: 20px;
+  }
+  .spec-item { border-top: 1px solid var(--line); padding-top: 8px; }
+  .spec-label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; }
+  .spec-value { font-size: 14px; font-weight: 600; }
+  .spec-value.sku-mono { font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
+  .product-modal-actions { display: flex; gap: 10px; }
+  .product-modal-actions .add-btn {
+    flex: 1;
+    width: auto;
+    height: 44px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
@@ -587,6 +678,13 @@ let produtos = [];
 </div>
 
 <div id="printArea"></div>
+
+<div class="product-modal-overlay" id="productModalOverlay">
+  <div class="product-modal">
+    <button class="product-modal-close" id="productModalClose">&times;</button>
+    <div id="productModalContent"></div>
+  </div>
+</div>
 
 <script>
 
@@ -675,7 +773,7 @@ function renderGrid() {
       ? `<img src="${fotoUrl}" alt="${p.nome}" loading="lazy" style="width:100%;height:100%;object-fit:contain;background:#fff;" onerror="this.outerHTML='<span>${iconePara(p.categoria)}</span>';">`
       : `<span>${iconePara(p.categoria)}</span>`;
     return `
-      <div class="card">
+      <div class="card" data-id="${p.id}" style="cursor:pointer;">
         <div class="card-photo">
           ${fotoHtml}
         </div>
@@ -840,6 +938,77 @@ document.getElementById("grid").addEventListener("click", (e) => {
   const btn = e.target.closest(".add-btn");
   if (btn && !btn.disabled) {
     addToOrcamento(btn.dataset.id);
+    return;
+  }
+  const card = e.target.closest(".card");
+  if (card) {
+    abrirModalProduto(card.dataset.id);
+  }
+});
+
+const productModalOverlay = document.getElementById("productModalOverlay");
+const productModalContent = document.getElementById("productModalContent");
+const productModalClose = document.getElementById("productModalClose");
+
+function abrirModalProduto(id) {
+  const p = findProduto(id);
+  if (!p) return;
+
+  const fotoUrl = p.fotoUrl || null;
+  const fotoHtml = fotoUrl
+    ? `<img src="${fotoUrl}" alt="${p.nome}" onerror="this.parentElement.innerHTML='<span>${iconePara(p.categoria)}</span>';">`
+    : `<span>${iconePara(p.categoria)}</span>`;
+  const st = p.estoque === 0 ? "Sem estoque" : (p.estoque <= 5 ? "Estoque baixo" : "Em estoque");
+
+  productModalContent.innerHTML = `
+    <div class="product-modal-photo">${fotoHtml}</div>
+    <div class="product-modal-body">
+      <div class="product-modal-cat">${p.categoria}</div>
+      <div class="product-modal-name">${p.nome}</div>
+      <div class="product-modal-specs">
+        <div class="spec-item">
+          <div class="spec-label">Código</div>
+          <div class="spec-value sku-mono">${p.sku}</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Marca</div>
+          <div class="spec-value">${p.marca}</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Categoria</div>
+          <div class="spec-value">${p.categoria}</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Disponibilidade</div>
+          <div class="spec-value">${st}</div>
+        </div>
+      </div>
+      <div class="product-modal-actions">
+        <button class="add-btn" data-id="${p.id}" ${p.estoque === 0 ? 'disabled' : ''}>Adicionar à lista de orçamento</button>
+      </div>
+    </div>
+  `;
+
+  productModalOverlay.classList.add("open");
+}
+
+function fecharModalProduto() {
+  productModalOverlay.classList.remove("open");
+}
+
+productModalClose.addEventListener("click", fecharModalProduto);
+productModalOverlay.addEventListener("click", (e) => {
+  if (e.target === productModalOverlay) fecharModalProduto();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") fecharModalProduto();
+});
+
+productModalContent.addEventListener("click", (e) => {
+  const btn = e.target.closest(".add-btn");
+  if (btn && !btn.disabled) {
+    addToOrcamento(btn.dataset.id);
+    fecharModalProduto();
   }
 });
 
