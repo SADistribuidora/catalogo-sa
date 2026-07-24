@@ -64,8 +64,12 @@ async function publicarProduto(p, token) {
 
   const data = await res.json();
   if (!res.ok) {
-    const msg = data.message || (data.cause && JSON.stringify(data.cause)) || JSON.stringify(data);
-    throw new Error(msg);
+    let msg = data.message || "Erro desconhecido";
+    if (Array.isArray(data.cause) && data.cause.length) {
+      const detalhes = data.cause.map((c) => c.message || c.code || JSON.stringify(c)).join(" | ");
+      msg = `${msg}: ${detalhes}`;
+    }
+    throw new Error(`[categoria ${categoryId}] ${msg}`);
   }
 
   // Grava a descrição separadamente (exigência da API do ML)
