@@ -7,7 +7,7 @@ function makeCookie() {
   const expiry = Date.now() + SESSION_HOURS * 60 * 60 * 1000;
   const sig = sign(expiry);
   const value = encodeURIComponent(`${expiry}.${sig}`);
-  return `sa_admin=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_HOURS * 3600}`;
+  return `sa_admin=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_HOURS * 3600}`;
 }
 
 exports.handler = async (event) => {
@@ -40,7 +40,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === "DELETE") {
     return {
       statusCode: 200,
-      headers: { "Set-Cookie": "sa_admin=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0" },
+      headers: { "Set-Cookie": "sa_admin=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0" },
       body: JSON.stringify({ ok: true }),
     };
   }
