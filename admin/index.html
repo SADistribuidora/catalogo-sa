@@ -158,6 +158,32 @@
 
   .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
 
+  .meli-panel {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .meli-panel-inner {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 4px;
+  }
+  .meli-panel-inner h3 { font-family: 'Oswald', sans-serif; font-size: 16px; margin: 0 0 4px; }
+  .meli-desc { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 14px; }
+  .meli-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .meli-progress { margin-top: 16px; }
+  .meli-progress-bar { background: var(--warehouse); border-radius: 999px; height: 10px; overflow: hidden; }
+  .meli-progress-fill { background: var(--torque); height: 100%; width: 0%; transition: width 0.3s; }
+  .meli-progress p { font-size: 12.5px; color: var(--ink-soft); margin: 8px 0 0; }
+  #meliFalhas { font-size: 12px; color: #A32D2D; margin-top: 8px; max-height: 160px; overflow-y: auto; }
+  #meliFalhas ul { margin: 4px 0 0; padding-left: 18px; }
+  .meli-badge {
+    background: #FFE44D; color: #1B1E24; font-size: 10px; font-weight: 700;
+    padding: 1px 5px; border-radius: 3px; vertical-align: middle;
+  }
+
   /* Modal */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -199,6 +225,7 @@
     <div class="title">Admin — Catálogo S&amp;A</div>
     <div class="actions">
       <button class="btn btn-primary" id="addBtn">+ Novo produto</button>
+      <button class="btn btn-ghost" id="meliBtn">Mercado Livre</button>
       <button class="btn btn-ghost" id="logoutBtn">Sair</button>
     </div>
   </header>
@@ -213,10 +240,28 @@
     <span class="stat-pill" id="statPill"></span>
   </div>
 
+  <div id="meliPanel" class="meli-panel hidden">
+    <div class="meli-panel-inner">
+      <h3>Mercado Livre</h3>
+      <p class="meli-desc">Publica os produtos do catálogo como anúncios no Mercado Livre. Preço enviado = custo × 1.4.</p>
+      <div class="meli-actions">
+        <a class="btn btn-ghost" href="/.netlify/functions/meli-auth" target="_blank">Conectar / Reconectar conta</a>
+        <button class="btn btn-primary" id="meliPublishSelectedBtn">Publicar selecionados (<span id="meliSelectedCount">0</span>)</button>
+        <button class="btn btn-danger" id="meliPublishAllBtn">Publicar todos os produtos ativos</button>
+      </div>
+      <div id="meliProgress" class="meli-progress hidden">
+        <div class="meli-progress-bar"><div class="meli-progress-fill" id="meliProgressFill"></div></div>
+        <p id="meliProgressText"></p>
+        <div id="meliFalhas"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
+          <th><input type="checkbox" id="selectAllCheckbox"></th>
           <th>Foto</th>
           <th>Nome</th>
           <th>Código</th>
@@ -245,6 +290,7 @@ const PAGE_SIZE = 50;
 let allProducts = [];
 let filtered = [];
 let page = 1;
+let selectedIds = new Set();
 let editingPhotoId = null;
 
 // ---------- Auth ----------
@@ -334,12 +380,13 @@ function renderTable() {
   const tbody = document.getElementById("tableBody");
   tbody.innerHTML = pageItems.map((p) => `
     <tr data-id="${p.id}">
+      <td><input type="checkbox" class="row-select" data-id="${p.id}" ${selectedIds.has(p.id) ? "checked" : ""}></td>
       <td>
         ${p.fotoUrl
           ? `<img class="thumb" src="${p.fotoUrl}" data-action="photo" data-id="${p.id}" title="Clique para trocar a foto">`
           : `<div class="thumb-placeholder" data-action="photo" data-id="${p.id}" title="Clique para adicionar foto">${iconeCategoria()}</div>`}
       </td>
-      <td><span class="editable" contenteditable="true" data-field="nome" data-id="${p.id}">${escapeHtml(p.nome)}</span></td>
+      <td><span class="editable" contenteditable="true" data-field="nome" data-id="${p.id}">${escapeHtml(p.nome)}</span>${p.meliId ? ' <span class="meli-badge" title="Já publicado no Mercado Livre">ML</span>' : ""}</td>
       <td><span class="editable sku-mono" contenteditable="true" data-field="sku" data-id="${p.id}">${escapeHtml(p.sku)}</span></td>
       <td><span class="editable" contenteditable="true" data-field="categoria" data-id="${p.id}">${escapeHtml(p.categoria)}</span></td>
       <td><span class="editable" contenteditable="true" data-field="marca" data-id="${p.id}">${escapeHtml(p.marca)}</span></td>
@@ -525,6 +572,105 @@ document.getElementById("addBtn").addEventListener("click", () => {
     }
   });
 });
+
+// ---------- Seleção de produtos ----------
+document.getElementById("tableBody").addEventListener("change", (e) => {
+  if (!e.target.classList.contains("row-select")) return;
+  const id = Number(e.target.dataset.id);
+  if (e.target.checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  atualizarContadorSelecionados();
+});
+
+document.getElementById("selectAllCheckbox").addEventListener("change", (e) => {
+  const checkboxes = document.querySelectorAll(".row-select");
+  checkboxes.forEach((cb) => {
+    cb.checked = e.target.checked;
+    const id = Number(cb.dataset.id);
+    if (e.target.checked) selectedIds.add(id);
+    else selectedIds.delete(id);
+  });
+  atualizarContadorSelecionados();
+});
+
+function atualizarContadorSelecionados() {
+  document.getElementById("meliSelectedCount").textContent = selectedIds.size;
+}
+
+// ---------- Painel Mercado Livre ----------
+document.getElementById("meliBtn").addEventListener("click", () => {
+  document.getElementById("meliPanel").classList.toggle("hidden");
+});
+
+document.getElementById("meliPublishSelectedBtn").addEventListener("click", () => {
+  if (selectedIds.size === 0) {
+    showToast("Selecione ao menos um produto na tabela");
+    return;
+  }
+  if (!confirm(`Publicar ${selectedIds.size} produto(s) selecionado(s) no Mercado Livre?`)) return;
+  iniciarPublicacaoMeli({ ids: Array.from(selectedIds) });
+});
+
+document.getElementById("meliPublishAllBtn").addEventListener("click", () => {
+  const ativos = allProducts.filter((p) => p.ativo && Number(p.preco) > 0).length;
+  if (!confirm(`Isso vai publicar TODOS os ${ativos} produtos ativos (com preço de custo válido) no Mercado Livre, com preço = custo × 1.4. Pode levar bastante tempo. Confirma?`)) return;
+  iniciarPublicacaoMeli({ all: true });
+});
+
+async function iniciarPublicacaoMeli(payload) {
+  try {
+    const res = await fetch("/.netlify/functions/meli-publish-background", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      showToast("Não autenticado no Mercado Livre. Clique em 'Conectar / Reconectar conta' primeiro.");
+      return;
+    }
+    showToast("Publicação iniciada! Acompanhe o progresso abaixo.");
+    document.getElementById("meliProgress").classList.remove("hidden");
+    acompanharProgressoMeli();
+  } catch {
+    showToast("Erro ao iniciar publicação");
+  }
+}
+
+let meliPollTimer = null;
+
+async function acompanharProgressoMeli() {
+  if (meliPollTimer) clearInterval(meliPollTimer);
+  meliPollTimer = setInterval(async () => {
+    try {
+      const res = await fetch("/.netlify/functions/meli-status");
+      const status = await res.json();
+      renderMeliProgress(status);
+      if (status.concluido) {
+        clearInterval(meliPollTimer);
+        loadProducts();
+      }
+    } catch {
+      clearInterval(meliPollTimer);
+    }
+  }, 3000);
+}
+
+function renderMeliProgress(status) {
+  const pct = status.total ? Math.round((status.processados / status.total) * 100) : 0;
+  document.getElementById("meliProgressFill").style.width = pct + "%";
+  document.getElementById("meliProgressText").textContent =
+    `${status.processados} de ${status.total} processados — ${status.publicados} publicados, ${status.falhas.length} falharam` +
+    (status.concluido ? " — concluído" : "");
+
+  const falhasEl = document.getElementById("meliFalhas");
+  if (status.falhas.length > 0) {
+    falhasEl.innerHTML = "<strong>Falhas:</strong><ul>" +
+      status.falhas.slice(-15).map((f) => `<li>${escapeHtml(f.nome)} (${f.id}): ${escapeHtml(f.erro)}</li>`).join("") +
+      "</ul>";
+  } else {
+    falhasEl.innerHTML = "";
+  }
+}
 
 checkAuth();
 </script>
