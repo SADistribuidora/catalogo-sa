@@ -767,7 +767,7 @@ function produtosFiltrados() {
   return produtos.filter(p => {
     const matchCat = filtroCategoria === "Todas" || p.categoria === filtroCategoria;
     const matchMarca = filtroMarca === "Todas" || p.marca === filtroMarca;
-    const matchBusca = !termo || p.nome.toLowerCase().includes(termo) || p.sku.toLowerCase().includes(termo) || p.marca.toLowerCase().includes(termo);
+    const matchBusca = !termo || p.nome.toLowerCase().includes(termo) || p.sku.toLowerCase().includes(termo) || p.marca.toLowerCase().includes(termo) || String(p.id).includes(termo);
     return matchCat && matchMarca && matchBusca;
   });
 }
@@ -801,7 +801,7 @@ function renderGrid() {
         <div class="card-body">
           <div class="card-cat">${p.categoria} · ${p.marca}</div>
           <div class="card-name">${p.nome}</div>
-          <span class="card-sku">${p.sku}</span>
+          <span class="card-sku">${p.sku} <span style="opacity:0.6;">· Sist. ${p.id}</span></span>
           <div class="card-footer">
             <div></div>
             <button class="add-btn" data-id="${p.id}" ${p.estoque === 0 ? 'disabled' : ''} title="Adicionar à lista">+</button>
@@ -937,7 +937,7 @@ function renderOrcamento() {
         ${thumb}
         <div class="quote-row-info">
           <div class="quote-row-name">${produto.nome}</div>
-          <div class="quote-row-sku">${produto.sku} · ${produto.marca}</div>
+          <div class="quote-row-sku">${produto.sku} · Sist. ${produto.id} · ${produto.marca}</div>
           <div class="quote-row-controls">
             <button class="qty-btn" onclick="alterarQtd('${id}', -1)">-</button>
             <span class="qty-value">${qtd}</span>
@@ -992,6 +992,10 @@ function abrirModalProduto(id) {
           <div class="spec-value sku-mono">${p.sku}</div>
         </div>
         <div class="spec-item">
+          <div class="spec-label">Cód. sistema</div>
+          <div class="spec-value sku-mono">${p.id}</div>
+        </div>
+        <div class="spec-item">
           <div class="spec-label">Marca</div>
           <div class="spec-value">${p.marca}</div>
         </div>
@@ -1038,7 +1042,7 @@ function montarTextoLista() {
   let texto = "Olá! Gostaria de um orçamento para os seguintes produtos:\n\n";
   ids.forEach(id => {
     const { produto, qtd } = orcamento[id];
-    texto += `${qtd}x  [${produto.sku}]  ${produto.nome}\n`;
+    texto += `${qtd}x  [${produto.sku} / Sist.${produto.id}]  ${produto.nome}\n`;
   });
   return texto;
 }
@@ -1078,7 +1082,7 @@ document.getElementById("pdfBtn").addEventListener("click", () => {
         <td style="padding:8px;border-bottom:1px solid #ddd;width:60px;">
           ${fotoUrl ? `<img src="${fotoUrl}" style="width:44px;height:44px;object-fit:contain;">` : ""}
         </td>
-        <td style="padding:8px;border-bottom:1px solid #ddd;font-family:monospace;font-size:12px;">${produto.sku}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;font-family:monospace;font-size:11px;">${produto.sku}<br><span style="color:#888;">Sist. ${produto.id}</span></td>
         <td style="padding:8px;border-bottom:1px solid #ddd;">${produto.nome}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;">${produto.marca}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${qtd}</td>
@@ -1140,7 +1144,7 @@ document.getElementById("exportCatalogBtn").addEventListener("click", () => {
         </div>
         <div style="font-family:sans-serif; font-size:9.5px; color:#479A4A; font-weight:600; text-transform:uppercase;">${p.categoria} · ${p.marca}</div>
         <div style="font-family:sans-serif; font-size:11.5px; font-weight:600; line-height:1.3; margin:2px 0;">${p.nome}</div>
-        <div style="font-family:monospace; font-size:10px; color:#555;">${p.sku}</div>
+        <div style="font-family:monospace; font-size:10px; color:#555;">${p.sku} <span style="color:#999;">· Sist.${p.id}</span></div>
       </div>`;
   });
 
