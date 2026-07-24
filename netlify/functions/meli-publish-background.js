@@ -17,8 +17,8 @@ async function salvarStatus(status) {
   await blobStore(JOB_STORE).setJSON(JOB_KEY, status);
 }
 
-async function preverCategoria(titulo, token) {
-  const url = `https://api.mercadolibre.com/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(titulo)}`;
+async function buscarCategoriaPorTexto(texto, token) {
+  const url = `https://api.mercadolibre.com/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(texto)}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const data = await res.json();
   if (Array.isArray(data) && data[0] && data[0].category_id) {
@@ -27,8 +27,16 @@ async function preverCategoria(titulo, token) {
   return null;
 }
 
+async function preverCategoria(titulo, categoriaInterna, token) {
+  let categoryId = await buscarCategoriaPorTexto(titulo, token);
+  if (!categoryId && categoriaInterna) {
+    categoryId = await buscarCategoriaPorTexto(categoriaInterna, token);
+  }
+  return categoryId;
+}
+
 async function publicarProduto(p, token) {
-  const categoryId = await preverCategoria(p.nome, token);
+  const categoryId = await preverCategoria(p.nome, p.categoria, token);
   if (!categoryId) {
     throw new Error("Não foi possível prever categoria no ML para este produto");
   }
@@ -40,6 +48,7 @@ async function publicarProduto(p, token) {
 
   const payload = {
     title: p.nome.slice(0, 60),
+    family_name: p.nome.slice(0, 40),
     category_id: categoryId,
     price: preco,
     currency_id: "BRL",
