@@ -20,19 +20,23 @@ async function salvarStatus(status) {
 async function buscarCategoriaPorTexto(texto, token) {
   const url = `https://api.mercadolibre.com/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(texto)}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const errBody = await res.text();
+    return { categoryId: null, erro: `HTTP ${res.status}: ${errBody.slice(0, 200)}` };
+  }
   const data = await res.json();
   if (Array.isArray(data) && data[0] && data[0].category_id) {
-    return data[0].category_id;
+    return { categoryId: data[0].category_id, erro: null };
   }
-  return null;
+  return { categoryId: null, erro: null };
 }
 
 async function preverCategoria(titulo, categoriaInterna, token) {
-  let categoryId = await buscarCategoriaPorTexto(titulo, token);
-  if (!categoryId && categoriaInterna) {
-    categoryId = await buscarCategoriaPorTexto(categoriaInterna, token);
+  let r = await buscarCategoriaPorTexto(titulo, token);
+  if (!r.categoryId && !r.erro && categoriaInterna) {
+    r = await buscarCategoriaPorTexto(categoriaInterna, token);
   }
-  return categoryId;
+  return r;
 }
 
 async function atributosObrigatorios(categoryId, token) {
@@ -94,10 +98,12 @@ function erroDetalhado(categoryId, data) {
 }
 
 async function publicarProduto(p, token) {
-  const categoryId = await preverCategoria(p.nome, p.categoria, token);
-  if (!categoryId) {
-    throw new Error("Não foi possível prever categoria no ML para este produto");
+  const previsao = await preverCategoria(p.nome, p.categoria, token);
+  if (!previsao.categoryId) {
+    const motivo = previsao.erro ? ` (erro na API: ${previsao.erro})` : "";
+    throw new Error(`Não foi possível prever categoria no ML para este produto${motivo}`);
   }
+  const categoryId = previsao.categoryId;
 
   const preco = Math.round(Number(p.preco) * MARKUP * 100) / 100;
   if (!preco || preco <= 0) {
@@ -110,6 +116,7 @@ async function publicarProduto(p, token) {
     : [];
   const base = {
     category_id: categoryId,
+    family_name: p.nome.slice(0, 40),
     price: preco,
     currency_id: "BRL",
     available_quantity: Math.max(1, Number(p.estoque) || 1),
@@ -121,10 +128,7 @@ async function publicarProduto(p, token) {
   };
 
   // Tentativa 1: fluxo clássico, com título livre
-  let { ok, data } = await criarItem(
-    { ...base, title: p.nome.slice(0, 60), family_name: p.nome.slice(0, 40) },
-    token
-  );
+  let { ok, data } = await criarItem({ ...base, title: p.nome.slice(0, 60) }, token);
 
   // Se a categoria exigir catálogo (título rejeitado), tenta vincular a um produto do catálogo ML
   if (!ok && data.error && /title/i.test(data.error) && /invalid/i.test(data.message || "")) {
