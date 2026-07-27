@@ -35,6 +35,15 @@ async function preverCategoria(titulo, categoriaInterna, token) {
   return categoryId;
 }
 
+async function atributosObrigatorios(categoryId, token) {
+  const url = `https://api.mercadolibre.com/categories/${categoryId}/attributes`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) return [];
+  const lista = await res.json();
+  if (!Array.isArray(lista)) return [];
+  return lista.filter((a) => a.tags && (a.tags.required || a.tags.catalog_required));
+}
+
 async function publicarProduto(p, token) {
   const categoryId = await preverCategoria(p.nome, p.categoria, token);
   if (!categoryId) {
@@ -44,6 +53,21 @@ async function publicarProduto(p, token) {
   const preco = Math.round(Number(p.preco) * MARKUP * 100) / 100;
   if (!preco || preco <= 0) {
     throw new Error("Produto sem preço de custo válido");
+  }
+
+  const attributes = [{ id: "BRAND", value_name: p.marca || "Genérica" }];
+  const obrigatorios = await atributosObrigatorios(categoryId, token);
+  for (const attr of obrigatorios) {
+    if (attributes.some((a) => a.id === attr.id)) continue; // já incluído (ex: BRAND)
+    if (attr.id === "MODEL") {
+      attributes.push({ id: "MODEL", value_name: p.sku || p.nome.slice(0, 30) });
+    } else if (Array.isArray(attr.values) && attr.values.length > 0) {
+      // Atributo de lista fixa: usa o primeiro valor disponível como aproximação
+      attributes.push({ id: attr.id, value_id: attr.values[0].id, value_name: attr.values[0].name });
+    } else {
+      // Atributo de texto livre: usa um valor genérico
+      attributes.push({ id: attr.id, value_name: "Não especificado" });
+    }
   }
 
   const payload = {
@@ -56,7 +80,7 @@ async function publicarProduto(p, token) {
     buying_mode: "buy_it_now",
     condition: "new",
     listing_type_id: process.env.MELI_LISTING_TYPE || "gold_special",
-    attributes: [{ id: "BRAND", value_name: p.marca || "Genérica" }],
+    attributes,
     pictures: p.fotoUrl
       ? [{ source: p.fotoUrl.startsWith("http") ? p.fotoUrl : `${SITE_URL}${p.fotoUrl}` }]
       : [],
@@ -77,6 +101,8 @@ async function publicarProduto(p, token) {
     if (Array.isArray(data.cause) && data.cause.length) {
       const detalhes = data.cause.map((c) => c.message || c.code || JSON.stringify(c)).join(" | ");
       msg = `${msg}: ${detalhes}`;
+    } else {
+      msg = `${msg} — resposta completa: ${JSON.stringify(data).slice(0, 500)}`;
     }
     throw new Error(`[categoria ${categoryId}] ${msg}`);
   }
