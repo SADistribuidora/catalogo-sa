@@ -44,6 +44,55 @@ async function atributosObrigatorios(categoryId, token) {
   return lista.filter((a) => a.tags && (a.tags.required || a.tags.catalog_required));
 }
 
+async function buscarProdutoCatalogo(categoryId, titulo, token) {
+  const url = `https://api.mercadolibre.com/products/search?category_id=${categoryId}&q=${encodeURIComponent(titulo)}&limit=1&site_id=MLB`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const resultados = data.results || data;
+  if (Array.isArray(resultados) && resultados[0] && resultados[0].id) {
+    return resultados[0].id;
+  }
+  return null;
+}
+
+async function montarAtributos(categoryId, p, token) {
+  const attributes = [{ id: "BRAND", value_name: p.marca || "Genérica" }];
+  const obrigatorios = await atributosObrigatorios(categoryId, token);
+  for (const attr of obrigatorios) {
+    if (attributes.some((a) => a.id === attr.id)) continue;
+    if (attr.id === "MODEL") {
+      attributes.push({ id: "MODEL", value_name: p.sku || p.nome.slice(0, 30) });
+    } else if (Array.isArray(attr.values) && attr.values.length > 0) {
+      attributes.push({ id: attr.id, value_id: attr.values[0].id, value_name: attr.values[0].name });
+    } else {
+      attributes.push({ id: attr.id, value_name: "Não especificado" });
+    }
+  }
+  return attributes;
+}
+
+async function criarItem(payload, token) {
+  const res = await fetch("https://api.mercadolibre.com/items", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+function erroDetalhado(categoryId, data) {
+  let msg = data.message || "Erro desconhecido";
+  if (Array.isArray(data.cause) && data.cause.length) {
+    const detalhes = data.cause.map((c) => c.message || c.code || JSON.stringify(c)).join(" | ");
+    msg = `${msg}: ${detalhes}`;
+  } else {
+    msg = `${msg} — resposta completa: ${JSON.stringify(data).slice(0, 500)}`;
+  }
+  return `[categoria ${categoryId}] ${msg}`;
+}
+
 async function publicarProduto(p, token) {
   const categoryId = await preverCategoria(p.nome, p.categoria, token);
   if (!categoryId) {
@@ -55,24 +104,11 @@ async function publicarProduto(p, token) {
     throw new Error("Produto sem preço de custo válido");
   }
 
-  const attributes = [{ id: "BRAND", value_name: p.marca || "Genérica" }];
-  const obrigatorios = await atributosObrigatorios(categoryId, token);
-  for (const attr of obrigatorios) {
-    if (attributes.some((a) => a.id === attr.id)) continue; // já incluído (ex: BRAND)
-    if (attr.id === "MODEL") {
-      attributes.push({ id: "MODEL", value_name: p.sku || p.nome.slice(0, 30) });
-    } else if (Array.isArray(attr.values) && attr.values.length > 0) {
-      // Atributo de lista fixa: usa o primeiro valor disponível como aproximação
-      attributes.push({ id: attr.id, value_id: attr.values[0].id, value_name: attr.values[0].name });
-    } else {
-      // Atributo de texto livre: usa um valor genérico
-      attributes.push({ id: attr.id, value_name: "Não especificado" });
-    }
-  }
-
-  const payload = {
-    title: p.nome.slice(0, 60),
-    family_name: p.nome.slice(0, 40),
+  const attributes = await montarAtributos(categoryId, p, token);
+  const pictures = p.fotoUrl
+    ? [{ source: p.fotoUrl.startsWith("http") ? p.fotoUrl : `${SITE_URL}${p.fotoUrl}` }]
+    : [];
+  const base = {
     category_id: categoryId,
     price: preco,
     currency_id: "BRL",
@@ -81,30 +117,40 @@ async function publicarProduto(p, token) {
     condition: "new",
     listing_type_id: process.env.MELI_LISTING_TYPE || "gold_special",
     attributes,
-    pictures: p.fotoUrl
-      ? [{ source: p.fotoUrl.startsWith("http") ? p.fotoUrl : `${SITE_URL}${p.fotoUrl}` }]
-      : [],
+    pictures,
   };
 
-  const res = await fetch("https://api.mercadolibre.com/items", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  // Tentativa 1: fluxo clássico, com título livre
+  let { ok, data } = await criarItem(
+    { ...base, title: p.nome.slice(0, 60), family_name: p.nome.slice(0, 40) },
+    token
+  );
 
-  const data = await res.json();
-  if (!res.ok) {
-    let msg = data.message || "Erro desconhecido";
-    if (Array.isArray(data.cause) && data.cause.length) {
-      const detalhes = data.cause.map((c) => c.message || c.code || JSON.stringify(c)).join(" | ");
-      msg = `${msg}: ${detalhes}`;
-    } else {
-      msg = `${msg} — resposta completa: ${JSON.stringify(data).slice(0, 500)}`;
+  // Se a categoria exigir catálogo (título rejeitado), tenta vincular a um produto do catálogo ML
+  if (!ok && data.error && /title/i.test(data.error) && /invalid/i.test(data.message || "")) {
+    const catalogProductId = await buscarProdutoCatalogo(categoryId, p.nome, token);
+    if (!catalogProductId) {
+      throw new Error(
+        `[categoria ${categoryId}] Categoria exige catálogo do Mercado Livre e não foi encontrada correspondência para "${p.nome}" — precisa de revisão manual`
+      );
     }
-    throw new Error(`[categoria ${categoryId}] ${msg}`);
+    ({ ok, data } = await criarItem({ ...base, catalog_product_id: catalogProductId }, token));
+  }
+
+  if (!ok) {
+    throw new Error(erroDetalhado(categoryId, data));
+  }
+
+  // Se a categoria exigir compatibilidade de veículo e não tivermos essa informação,
+  // declara exceção (sem veículo específico) pra não travar a publicação.
+  try {
+    await fetch(`https://api.mercadolibre.com/items/${data.id}/compatibilities/exception`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ comment: "Peça genérica/multimarcas — compatibilidade não cadastrada no catálogo interno" }),
+    });
+  } catch {
+    // Categoria pode não exigir isso; ignora se der erro
   }
 
   // Grava a descrição separadamente (exigência da API do ML)
