@@ -183,6 +183,24 @@
     background: #FFE44D; color: #1B1E24; font-size: 10px; font-weight: 700;
     padding: 1px 5px; border-radius: 3px; vertical-align: middle;
   }
+  .import-modal-box {
+    background: #fff; border-radius: 10px; padding: 24px; width: 900px; max-width: 95vw;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .import-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .import-row img { width: 44px; height: 44px; object-fit: contain; background: var(--warehouse); border-radius: 5px; border: 1px solid var(--line); }
+  .import-row .info { flex: 1; min-width: 0; }
+  .import-row .titulo { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .import-row .sku { font-size: 11px; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; }
+  .import-status { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .import-status.match { background: var(--ok-bg); color: var(--ok-text); }
+  .import-status.vinculado { background: #E0E0E0; color: #555; }
+  .import-status.pendente { background: var(--off-bg); color: var(--off-text); }
+  .import-row select { font-size: 12px; padding: 5px 8px; border-radius: 5px; border: 1px solid var(--line); max-width: 220px; }
+  .import-summary { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
 
   /* Modal */
   .modal-overlay {
@@ -249,6 +267,7 @@
         <button class="btn btn-primary" id="meliPublishSelectedBtn">Publicar selecionados (<span id="meliSelectedCount">0</span>)</button>
         <button class="btn btn-danger" id="meliPublishAllBtn">Publicar todos os produtos ativos</button>
         <button class="btn btn-ghost" id="meliSyncStockBtn">Sincronizar estoque agora</button>
+        <button class="btn btn-ghost" id="meliImportBtn">Importar anúncios existentes</button>
       </div>
       <div id="meliProgress" class="meli-progress hidden">
         <div class="meli-progress-bar"><div class="meli-progress-fill" id="meliProgressFill"></div></div>
@@ -713,6 +732,115 @@ function renderMeliProgress(status) {
       "</ul>";
   } else {
     falhasEl.innerHTML = "";
+  }
+}
+
+document.getElementById("meliImportBtn").addEventListener("click", async () => {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="import-modal-box">
+      <h3>Importar anúncios existentes do Mercado Livre</h3>
+      <div class="import-summary" id="importSummary">Buscando seus anúncios no Mercado Livre, aguarde...</div>
+      <div id="importList"></div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-ghost" id="importCloseBtn">Fechar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#importCloseBtn").addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+
+  try {
+    const res = await fetch("/.netlify/functions/meli-list-items");
+    if (res.status === 401) {
+      overlay.querySelector("#importSummary").textContent = "Sessão expirada, faça login de novo.";
+      return;
+    }
+    if (res.status === 400) {
+      overlay.querySelector("#importSummary").textContent = "Conecte a conta do Mercado Livre primeiro (botão 'Conectar / Reconectar conta').";
+      return;
+    }
+    const data = await res.json();
+    renderImportList(data.anuncios, overlay);
+  } catch {
+    overlay.querySelector("#importSummary").textContent = "Erro ao buscar anúncios.";
+  }
+});
+
+function renderImportList(anuncios, overlay) {
+  const matches = anuncios.filter((a) => a.status === "match_automatico").length;
+  const vinculados = anuncios.filter((a) => a.status === "ja_vinculado").length;
+  const pendentes = anuncios.filter((a) => a.status === "sem_match").length;
+
+  overlay.querySelector("#importSummary").innerHTML =
+    `<strong>${anuncios.length}</strong> anúncios encontrados — ` +
+    `<strong>${matches}</strong> com correspondência automática (por SKU), ` +
+    `<strong>${vinculados}</strong> já vinculados, ` +
+    `<strong>${pendentes}</strong> precisam de revisão manual.`;
+
+  const listEl = document.getElementById("importList");
+  listEl.innerHTML = anuncios.map((a, i) => {
+    const statusClass = a.status === "match_automatico" ? "match" : a.status === "ja_vinculado" ? "vinculado" : "pendente";
+    const statusLabel = a.status === "match_automatico" ? "Match por SKU" : a.status === "ja_vinculado" ? "Já vinculado" : "Sem correspondência";
+    return `
+      <div class="import-row" data-meli-id="${a.meliId}">
+        <img src="${a.foto || ''}" onerror="this.style.visibility='hidden'">
+        <div class="info">
+          <div class="titulo">${escapeHtml(a.titulo)}</div>
+          <div class="sku">${a.sku ? 'SKU: ' + escapeHtml(a.sku) : 'sem SKU cadastrado'} ${a.produtoNome ? '→ ' + escapeHtml(a.produtoNome) : ''}</div>
+        </div>
+        <span class="import-status ${statusClass}">${statusLabel}</span>
+        ${a.status === "match_automatico"
+          ? `<button class="btn btn-primary btn-small" data-action="confirmar" data-produto-id="${a.produtoId}" data-meli-id="${a.meliId}">Confirmar</button>`
+          : a.status === "sem_match"
+          ? `<input type="text" placeholder="Buscar produto..." class="import-search" data-meli-id="${a.meliId}" style="font-size:12px;padding:5px 8px;border-radius:5px;border:1px solid var(--line);max-width:180px;">
+             <button class="btn btn-ghost btn-small" data-action="vincular-manual" data-meli-id="${a.meliId}">Vincular</button>`
+          : ""}
+      </div>
+    `;
+  }).join("");
+
+  listEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const meliId = btn.dataset.meliId;
+
+    if (btn.dataset.action === "confirmar") {
+      await vincularProduto(btn.dataset.produtoId, meliId, btn);
+    }
+
+    if (btn.dataset.action === "vincular-manual") {
+      const row = btn.closest(".import-row");
+      const termo = row.querySelector(".import-search").value.trim().toLowerCase();
+      if (!termo) { showToast("Digite parte do nome ou código do produto"); return; }
+      const encontrado = allProducts.find((p) =>
+        p.nome.toLowerCase().includes(termo) || p.sku.toLowerCase().includes(termo)
+      );
+      if (!encontrado) { showToast("Nenhum produto encontrado com esse termo"); return; }
+      if (!confirm(`Vincular este anúncio ao produto "${encontrado.nome}" (${encontrado.sku})?`)) return;
+      await vincularProduto(encontrado.id, meliId, btn);
+    }
+  });
+}
+
+async function vincularProduto(produtoId, meliId, btnEl) {
+  try {
+    const res = await fetch("/.netlify/functions/meli-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ produtoId, meliId }),
+    });
+    if (!res.ok) { showToast("Erro ao vincular"); return; }
+    showToast("Vinculado com sucesso!");
+    const row = btnEl.closest(".import-row");
+    row.querySelector(".import-status").textContent = "Vinculado";
+    row.querySelector(".import-status").className = "import-status vinculado";
+    btnEl.remove();
+    row.querySelectorAll(".import-search").forEach((el) => el.remove());
+  } catch {
+    showToast("Erro ao vincular");
   }
 }
 
