@@ -7,7 +7,37 @@ const PRODUCTS_KEY = "products";
 const JOB_STORE = "sa-meli";
 const JOB_KEY = "job-status";
 const SITE_URL = "https://seadistribuidora.com.br";
-const MARKUP = 1.4;
+const MARKUP = 1.4; // chute inicial, o preço final é ajustado pela taxa real do ML
+const MARGEM_MINIMA = 0.20; // margem líquida mínima garantida após a taxa do Mercado Livre
+
+async function consultarTaxaML(preco, categoryId, listingType, token) {
+  const url = `https://api.mercadolibre.com/sites/MLB/listing_prices?price=${preco}&category_id=${categoryId}&listing_type_id=${listingType}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const entry = Array.isArray(data) ? data[0] : data;
+  if (!entry || typeof entry.sale_fee_amount !== "number") return null;
+  return entry.sale_fee_amount;
+}
+
+async function calcularPrecoComMargem(custo, categoryId, listingType, token) {
+  let preco = Math.round(custo * MARKUP * 100) / 100;
+  for (let tentativa = 0; tentativa < 6; tentativa++) {
+    const taxa = await consultarTaxaML(preco, categoryId, listingType, token);
+    if (taxa === null) {
+      // Não deu pra consultar a taxa real — mantém o markup padrão como aproximação
+      return preco;
+    }
+    const liquido = preco - taxa;
+    const margemAtual = (liquido - custo) / custo;
+    if (margemAtual >= MARGEM_MINIMA) {
+      return preco;
+    }
+    const faltaCobrir = custo * (1 + MARGEM_MINIMA) - liquido;
+    preco = Math.round((preco + faltaCobrir) * 100) / 100;
+  }
+  return preco;
+}
 
 function blobStore(name) {
   return getStore({ name, siteID: process.env.BLOBS_SITE_ID, token: process.env.BLOBS_TOKEN });
@@ -105,10 +135,12 @@ async function publicarProduto(p, token) {
   }
   const categoryId = previsao.categoryId;
 
-  const preco = Math.round(Number(p.preco) * MARKUP * 100) / 100;
-  if (!preco || preco <= 0) {
+  const custo = Number(p.preco);
+  if (!custo || custo <= 0) {
     throw new Error("Produto sem preço de custo válido");
   }
+  const listingType = process.env.MELI_LISTING_TYPE || "gold_special";
+  const preco = await calcularPrecoComMargem(custo, categoryId, listingType, token);
 
   const attributes = await montarAtributos(categoryId, p, token);
   const pictures = p.fotoUrl
@@ -122,7 +154,7 @@ async function publicarProduto(p, token) {
     available_quantity: Math.max(1, Number(p.estoque) || 1),
     buying_mode: "buy_it_now",
     condition: "new",
-    listing_type_id: process.env.MELI_LISTING_TYPE || "gold_special",
+    listing_type_id: listingType,
     attributes,
     pictures,
   };
@@ -191,13 +223,13 @@ exports.handler = async (event) => {
     const idSet = new Set(body.ids.map(Number));
     alvo = produtos.filter((p) => idSet.has(p.id));
   } else if (body.all === true) {
-    // Pula produtos já publicados, sem preço válido, ou sem estoque
-    alvo = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && Number(p.estoque) > 0 && !p.meliId);
+    // Pula produtos que já foram publicados antes (evita duplicar anúncios)
+    alvo = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && !p.meliId);
   } else {
     return { statusCode: 400, body: JSON.stringify({ error: "Envie 'ids' (lista) ou 'all: true'" }) };
   }
 
-  const totalAindaFaltando = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && Number(p.estoque) > 0 && !p.meliId).length;
+  const totalAindaFaltando = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && !p.meliId).length;
 
   const status = {
     iniciadoEm: new Date().toISOString(),
