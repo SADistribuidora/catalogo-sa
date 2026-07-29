@@ -9,7 +9,7 @@ exports.handler = async (event) => {
   }
 
   const tipo = (event.queryStringParameters || {}).tipo;
-  const jobKey = tipo === "estoque" ? "stock-sync-status" : "job-status";
+  const jobKey = tipo === "estoque" ? "stock-sync-status" : tipo === "preco" ? "price-fix-status" : "job-status";
 
   const store = getStore({ name: JOB_STORE, siteID: process.env.BLOBS_SITE_ID, token: process.env.BLOBS_TOKEN });
   const status = await store.get(jobKey, { type: "json" });

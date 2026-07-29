@@ -268,6 +268,7 @@
         <button class="btn btn-danger" id="meliPublishAllBtn">Publicar todos os produtos ativos</button>
         <button class="btn btn-ghost" id="meliSyncStockBtn">Sincronizar estoque agora</button>
         <button class="btn btn-ghost" id="meliImportBtn">Importar anúncios existentes</button>
+        <button class="btn btn-ghost" id="meliFixPricesBtn">Corrigir preços já publicados</button>
       </div>
       <div id="meliProgress" class="meli-progress hidden">
         <div class="meli-progress-bar"><div class="meli-progress-fill" id="meliProgressFill"></div></div>
@@ -662,6 +663,41 @@ async function acompanharProgressoMeliEstoque() {
       if (status.concluido) clearInterval(meliStockPollTimer);
     } catch {
       clearInterval(meliStockPollTimer);
+    }
+  }, 3000);
+}
+
+document.getElementById("meliFixPricesBtn").addEventListener("click", async () => {
+  if (!confirm("Isso vai revisar o preço de todos os produtos já publicados no Mercado Livre e corrigir só os que estiverem abaixo da margem mínima de 20%. Confirma?")) return;
+  try {
+    const res = await fetch("/.netlify/functions/meli-price-fix-background", { method: "POST" });
+    if (res.status === 401) {
+      showToast("Sessão expirada, faça login de novo.");
+      return;
+    }
+    showToast("Revisão de preços iniciada!");
+    document.getElementById("meliProgress").classList.remove("hidden");
+    acompanharProgressoMeliPrecos();
+  } catch {
+    showToast("Erro ao iniciar revisão de preços");
+  }
+});
+
+let meliPricePollTimer = null;
+async function acompanharProgressoMeliPrecos() {
+  if (meliPricePollTimer) clearInterval(meliPricePollTimer);
+  meliPricePollTimer = setInterval(async () => {
+    try {
+      const res = await fetch("/.netlify/functions/meli-status?tipo=preco");
+      const status = await res.json();
+      const pct = status.total ? Math.round((status.processados / status.total) * 100) : 0;
+      document.getElementById("meliProgressFill").style.width = pct + "%";
+      document.getElementById("meliProgressText").textContent =
+        `Preços: ${status.processados} de ${status.total} — ${status.corrigidos || 0} corrigidos, ${status.jaCorretos || 0} já estavam certos, ${(status.falhas || []).length} falharam` +
+        (status.concluido ? " — concluído" : "");
+      if (status.concluido) clearInterval(meliPricePollTimer);
+    } catch {
+      clearInterval(meliPricePollTimer);
     }
   }, 3000);
 }
