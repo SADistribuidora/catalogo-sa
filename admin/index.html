@@ -248,6 +248,7 @@
         <a class="btn btn-ghost" href="/.netlify/functions/meli-auth" target="_blank">Conectar / Reconectar conta</a>
         <button class="btn btn-primary" id="meliPublishSelectedBtn">Publicar selecionados (<span id="meliSelectedCount">0</span>)</button>
         <button class="btn btn-danger" id="meliPublishAllBtn">Publicar todos os produtos ativos</button>
+        <button class="btn btn-ghost" id="meliSyncStockBtn">Sincronizar estoque agora</button>
       </div>
       <div id="meliProgress" class="meli-progress hidden">
         <div class="meli-progress-bar"><div class="meli-progress-fill" id="meliProgressFill"></div></div>
@@ -610,6 +611,41 @@ document.getElementById("meliPublishSelectedBtn").addEventListener("click", () =
   if (!confirm(`Publicar ${selectedIds.size} produto(s) selecionado(s) no Mercado Livre?`)) return;
   iniciarPublicacaoMeli({ ids: Array.from(selectedIds) });
 });
+
+document.getElementById("meliSyncStockBtn").addEventListener("click", async () => {
+  if (!confirm("Isso vai atualizar o estoque de todos os produtos já publicados no Mercado Livre com o estoque atual do site. Confirma?")) return;
+  try {
+    const res = await fetch("/.netlify/functions/meli-stock-sync-background", { method: "POST" });
+    if (res.status === 401) {
+      showToast("Sessão expirada, faça login de novo.");
+      return;
+    }
+    showToast("Sincronização de estoque com o ML iniciada!");
+    document.getElementById("meliProgress").classList.remove("hidden");
+    acompanharProgressoMeliEstoque();
+  } catch {
+    showToast("Erro ao iniciar sincronização de estoque");
+  }
+});
+
+let meliStockPollTimer = null;
+async function acompanharProgressoMeliEstoque() {
+  if (meliStockPollTimer) clearInterval(meliStockPollTimer);
+  meliStockPollTimer = setInterval(async () => {
+    try {
+      const res = await fetch("/.netlify/functions/meli-status?tipo=estoque");
+      const status = await res.json();
+      const pct = status.total ? Math.round((status.processados / status.total) * 100) : 0;
+      document.getElementById("meliProgressFill").style.width = pct + "%";
+      document.getElementById("meliProgressText").textContent =
+        `Estoque: ${status.processados} de ${status.total} — ${status.atualizados || 0} atualizados, ${(status.falhas || []).length} falharam` +
+        (status.concluido ? " — concluído" : "");
+      if (status.concluido) clearInterval(meliStockPollTimer);
+    } catch {
+      clearInterval(meliStockPollTimer);
+    }
+  }, 3000);
+}
 
 document.getElementById("meliPublishAllBtn").addEventListener("click", () => {
   const ativos = allProducts.filter((p) => p.ativo && Number(p.preco) > 0).length;

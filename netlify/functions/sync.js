@@ -90,6 +90,18 @@ exports.handler = async (event) => {
   const listaFinal = Array.from(porId.values());
   await store.setJSON(KEY, listaFinal);
 
+  // Dispara a sincronização de estoque com o Mercado Livre em segundo plano
+  // (não espera terminar — a function em background responde rápido e continua sozinha)
+  try {
+    const baseUrl = `https://${event.headers.host}`;
+    fetch(`${baseUrl}/.netlify/functions/meli-stock-sync-background`, {
+      method: "POST",
+      headers: { "X-Sync-Key": headerKey },
+    }).catch(() => {});
+  } catch {
+    // Não bloqueia a resposta principal se isso falhar
+  }
+
   return jsonResponse(200, {
     ok: true,
     recebidos: itens.length,
