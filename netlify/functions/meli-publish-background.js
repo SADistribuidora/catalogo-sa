@@ -191,10 +191,13 @@ exports.handler = async (event) => {
     const idSet = new Set(body.ids.map(Number));
     alvo = produtos.filter((p) => idSet.has(p.id));
   } else if (body.all === true) {
-    alvo = produtos.filter((p) => p.ativo && Number(p.preco) > 0);
+    // Pula produtos que já foram publicados antes (evita duplicar anúncios)
+    alvo = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && !p.meliId);
   } else {
     return { statusCode: 400, body: JSON.stringify({ error: "Envie 'ids' (lista) ou 'all: true'" }) };
   }
+
+  const totalAindaFaltando = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && !p.meliId).length;
 
   const status = {
     iniciadoEm: new Date().toISOString(),
@@ -203,6 +206,7 @@ exports.handler = async (event) => {
     publicados: 0,
     falhas: [],
     concluido: false,
+    restantesNoCatalogoTodo: totalAindaFaltando,
   };
   await salvarStatus(status);
 

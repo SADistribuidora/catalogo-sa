@@ -694,9 +694,17 @@ async function acompanharProgressoMeli() {
 function renderMeliProgress(status) {
   const pct = status.total ? Math.round((status.processados / status.total) * 100) : 0;
   document.getElementById("meliProgressFill").style.width = pct + "%";
-  document.getElementById("meliProgressText").textContent =
-    `${status.processados} de ${status.total} processados — ${status.publicados} publicados, ${status.falhas.length} falharam` +
-    (status.concluido ? " — concluído" : "");
+  let texto = `${status.processados} de ${status.total} processados neste lote — ${status.publicados} publicados, ${status.falhas.length} falharam`;
+  if (status.concluido) {
+    texto += " — lote concluído";
+    if (status.restantesNoCatalogoTodo && status.restantesNoCatalogoTodo > status.publicados) {
+      const faltam = status.restantesNoCatalogoTodo - status.publicados;
+      texto += `. Ainda restam cerca de ${faltam} produtos no catálogo — clique em "Publicar todos" de novo pra continuar de onde parou.`;
+    } else {
+      texto += ". Todos os produtos ativos já foram publicados!";
+    }
+  }
+  document.getElementById("meliProgressText").textContent = texto;
 
   const falhasEl = document.getElementById("meliFalhas");
   if (status.falhas.length > 0) {
