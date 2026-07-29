@@ -191,13 +191,13 @@ exports.handler = async (event) => {
     const idSet = new Set(body.ids.map(Number));
     alvo = produtos.filter((p) => idSet.has(p.id));
   } else if (body.all === true) {
-    // Pula produtos que já foram publicados antes (evita duplicar anúncios)
-    alvo = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && !p.meliId);
+    // Pula produtos já publicados, sem preço válido, ou sem estoque
+    alvo = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && Number(p.estoque) > 0 && !p.meliId);
   } else {
     return { statusCode: 400, body: JSON.stringify({ error: "Envie 'ids' (lista) ou 'all: true'" }) };
   }
 
-  const totalAindaFaltando = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && !p.meliId).length;
+  const totalAindaFaltando = produtos.filter((p) => p.ativo && Number(p.preco) > 0 && Number(p.estoque) > 0 && !p.meliId).length;
 
   const status = {
     iniciadoEm: new Date().toISOString(),

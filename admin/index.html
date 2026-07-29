@@ -667,8 +667,8 @@ async function acompanharProgressoMeliEstoque() {
 }
 
 document.getElementById("meliPublishAllBtn").addEventListener("click", () => {
-  const ativos = allProducts.filter((p) => p.ativo && Number(p.preco) > 0).length;
-  if (!confirm(`Isso vai publicar TODOS os ${ativos} produtos ativos (com preço de custo válido) no Mercado Livre, com preço = custo × 1.4. Pode levar bastante tempo. Confirma?`)) return;
+  const elegiveis = allProducts.filter((p) => p.ativo && Number(p.preco) > 0 && Number(p.estoque) > 0 && !p.meliId).length;
+  if (!confirm(`Isso vai publicar ${elegiveis} produtos (ativos, com preço válido, com estoque e ainda não publicados) no Mercado Livre, com preço = custo × 1.4. Pode levar bastante tempo — pode precisar clicar de novo pra continuar de onde parou. Confirma?`)) return;
   iniciarPublicacaoMeli({ all: true });
 });
 
