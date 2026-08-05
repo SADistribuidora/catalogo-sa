@@ -4,6 +4,50 @@
 # e envia para o site via API segura.
 # ============================================================
 
+# ---- FUNCAO: redimensionar imagem e converter para base64 ----
+function Resize-And-Encode-Image {
+    param(
+        [string]$path,
+        [int]$maxSize = 500,
+        [int]$quality = 75
+    )
+    Add-Type -AssemblyName System.Drawing
+
+    $img = [System.Drawing.Image]::FromFile($path)
+    try {
+        $ratio = [Math]::Min([double]$maxSize / $img.Width, [double]$maxSize / $img.Height)
+        if ($ratio -lt 1) {
+            $newWidth = [int]($img.Width * $ratio)
+            $newHeight = [int]($img.Height * $ratio)
+        } else {
+            $newWidth = $img.Width
+            $newHeight = $img.Height
+        }
+
+        $bitmap = New-Object System.Drawing.Bitmap $newWidth, $newHeight
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+        $graphics.DrawImage($img, 0, 0, $newWidth, $newHeight)
+
+        $encoderParams = New-Object System.Drawing.Imaging.EncoderParameters(1)
+        $qualityParam = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, $quality)
+        $encoderParams.Param[0] = $qualityParam
+        $jpegCodec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq "image/jpeg" }
+
+        $ms = New-Object System.IO.MemoryStream
+        $bitmap.Save($ms, $jpegCodec, $encoderParams)
+        $bytes = $ms.ToArray()
+
+        $graphics.Dispose()
+        $bitmap.Dispose()
+        $ms.Dispose()
+
+        return [Convert]::ToBase64String($bytes)
+    } finally {
+        $img.Dispose()
+    }
+}
+
 # ---- CONFIGURACAO ----
 $SyncUrl = "https://seadistribuidora.com.br/.netlify/functions/sync"
 $SyncKey = $env:SA_SYNC_KEY   # mesma chave configurada no Netlify - definir como variavel de ambiente da maquina/tarefa agendada
@@ -79,6 +123,7 @@ EXIT
     $lote = 500
     $totalAtualizados = 0
     $totalNovos = 0
+    $todosNovosIds = @()
 
     for ($i = 0; $i -lt $produtos.Count; $i += $lote) {
         $fim = [Math]::Min($i + $lote, $produtos.Count) - 1
@@ -89,10 +134,68 @@ EXIT
 
         $totalAtualizados += $resposta.atualizados
         $totalNovos += $resposta.novos
+        if ($resposta.novosIds) {
+            $todosNovosIds += $resposta.novosIds
+        }
     }
 
     "[$dataHora] Sincronizacao concluida: $totalAtualizados atualizados, $totalNovos novos." | Out-File -Append $LogFile
     Write-Host "Sincronizacao concluida com sucesso: $totalAtualizados atualizados, $totalNovos novos produtos."
+
+    # ---- 4. Buscar e enviar fotos dos produtos novos ----
+    if ($todosNovosIds.Count -gt 0) {
+        "[$dataHora] Buscando fotos para $($todosNovosIds.Count) produtos novos..." | Out-File -Append $LogFile
+
+        $idsFormatados = ($todosNovosIds -join ",")
+        $sqlFotoFile = "$ScratchDir\export_fotos.sql"
+        $outFotoFile = "$ScratchDir\export_fotos.txt"
+
+        @"
+SET HEADING OFF
+SET PAGESIZE 0
+SET LINESIZE 32767
+SET LONG 500000
+SET FEEDBACK OFF
+SET TRIMSPOOL ON
+SET TRIM ON
+SET WRAP OFF
+SET DEFINE OFF
+SPOOL $outFotoFile
+SELECT JSON_OBJECT('id' VALUE PRODUTO_ID, 'foto' VALUE ENDERECO_FOTO)
+FROM PRODUTOS
+WHERE PRODUTO_ID IN ($idsFormatados) AND ENDERECO_FOTO IS NOT NULL;
+SPOOL OFF
+EXIT
+"@ | Out-File -Encoding ASCII $sqlFotoFile
+
+        sqlplus -S ADMIN/MANAGER@MASTER "@$sqlFotoFile" | Out-Null
+
+        $fotosEnviadas = 0
+        $fotosFalhas = 0
+
+        if (Test-Path $outFotoFile) {
+            $linhasFoto = Get-Content $outFotoFile | Where-Object { $_.Trim() -ne "" }
+            foreach ($linha in $linhasFoto) {
+                try {
+                    $registro = $linha | ConvertFrom-Json
+                    $caminhoFoto = $registro.foto
+                    if (-not (Test-Path $caminhoFoto)) {
+                        $fotosFalhas++
+                        continue
+                    }
+                    $base64Foto = Resize-And-Encode-Image -path $caminhoFoto -maxSize 500 -quality 75
+                    $payloadFoto = @{ id = $registro.id; imageBase64 = "data:image/jpeg;base64,$base64Foto" } | ConvertTo-Json -Compress
+                    Invoke-RestMethod -Uri "https://seadistribuidora.com.br/.netlify/functions/photo" -Method Post -Headers @{ "X-Sync-Key" = $SyncKey } -ContentType "application/json" -Body $payloadFoto | Out-Null
+                    $fotosEnviadas++
+                } catch {
+                    $fotosFalhas++
+                }
+            }
+        }
+
+        "[$dataHora] Fotos: $fotosEnviadas enviadas, $fotosFalhas falharam (arquivo nao encontrado ou erro)." | Out-File -Append $LogFile
+        Write-Host "Fotos: $fotosEnviadas enviadas, $fotosFalhas falharam."
+    }
 }
 catch {
     $erro = $_.Exception.Message

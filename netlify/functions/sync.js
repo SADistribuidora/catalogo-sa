@@ -58,6 +58,7 @@ exports.handler = async (event) => {
 
   let atualizados = 0;
   let novos = 0;
+  const novosIds = [];
 
   for (const item of itens) {
     const id = Number(item.id);
@@ -84,6 +85,7 @@ exports.handler = async (event) => {
       };
       porId.set(id, novo);
       novos++;
+      novosIds.push(id);
     }
   }
 
@@ -107,6 +109,7 @@ exports.handler = async (event) => {
     recebidos: itens.length,
     atualizados,
     novos,
+    novosIds,
     totalNoSite: listaFinal.length,
   });
 };
